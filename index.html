@@ -1,0 +1,393 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Web Novel Reader</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Georgia', serif;
+            background: #1a1a1a;
+            color: #e0e0e0;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            padding: 20px;
+        }
+        
+        .container {
+            max-width: 800px;
+            width: 100%;
+            background: #2a2a2a;
+            padding: 40px;
+            border-radius: 8px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.3);
+        }
+        
+        h1 {
+            margin-bottom: 10px;
+            color: #ab4b4b;
+        }
+        
+        .meta {
+            color: #999;
+            margin-bottom: 30px;
+            font-size: 14px;
+        }
+        
+        .content {
+            line-height: 1.8;
+            font-size: 16px;
+            margin-bottom: 30px;
+            text-align: justify;
+        }
+        
+        .controls {
+            display: flex;
+            gap: 10px;
+            justify-content: space-between;
+        }
+        
+        button {
+            padding: 10px 20px;
+            background: #0066cc;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 14px;
+        }
+        
+        button:hover {
+            background: #0052a3;
+        }
+        
+        button:disabled {
+            background: #666;
+            cursor: not-allowed;
+        }
+
+        /* Header, navigation and search */
+        .header {
+            display: flex;
+            gap: 16px;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+        }
+
+        .brand h1 {
+            margin-bottom: 6px;
+            color: #ab4b4b;
+        }
+
+        .nav {
+            display: flex;
+            gap: 8px;
+        }
+
+        .nav a {
+            color: #e0e0e0;
+            text-decoration: none;
+            padding: 8px 12px;
+            border-radius: 6px;
+            font-size: 14px;
+        }
+
+        .nav a.active,
+        .nav a:hover {
+            background: #444;
+            color: #fff;
+        }
+
+        .search {
+            display:flex;
+            gap:8px;
+            align-items:center;
+        }
+
+        .search input[type="search"] {
+            padding: 8px 10px;
+            border-radius: 6px;
+            border: 1px solid #444;
+            background: #111;
+            color: #fff;
+            width: 260px;
+        }
+
+        /* Sections and cards */
+        .sections {
+            margin-top: 28px;
+            display: grid;
+            gap: 20px;
+        }
+
+        .section {
+            background: #222;
+            padding: 14px;
+            border-radius: 8px;
+        }
+
+        .section h2 {
+            margin-bottom: 10px;
+            color: #ffd166;
+            font-size: 18px;
+            display:flex;
+            align-items:center;
+            gap:8px;
+        }
+
+        .cards {
+            display: flex;
+            gap: 12px;
+            overflow-x: auto;
+            padding-bottom: 6px;
+        }
+
+        .card {
+            min-width: 150px;
+            background: #333;
+            padding: 10px;
+            border-radius: 8px;
+            flex: 0 0 auto;
+            cursor: pointer;
+            transition: transform .15s ease, box-shadow .15s ease;
+        }
+
+        .card:hover { transform: translateY(-6px); box-shadow: 0 8px 18px rgba(0,0,0,0.4); }
+
+        .card img { width: 100%; height: 180px; object-fit: cover; border-radius: 6px; margin-bottom: 8px; }
+
+        .card h3 { font-size: 16px; color: #fff; margin-bottom: 6px; }
+        .card p { font-size: 13px; color: #ccc; margin-bottom: 6px; }
+
+        .badge { display:inline-block; background:#ff6b6b; color:#fff; padding:3px 8px; border-radius:6px; font-size:12px; }
+
+        @media (max-width: 600px) {
+            .header { flex-direction: column; align-items: stretch; gap: 12px; }
+            .search input[type="search"] { width:100%; }
+            .card img { height: 140px; }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header class="header">
+            <div class="brand">
+                <h1 id="title">Web Novel Reader</h1>
+                <div class="meta"> <span>Chapter <span id="chapter">1</span> of <span id="totalChapters">3</span></span> </div>
+            </div>
+
+            <nav class="nav" aria-label="Main navigation">
+                <a href="#" class="active">หน้าแรก</a>
+                <a href="#">หมวดหมู่</a>
+                <a href="#">ชั้นหนังสือ</a>
+                <a href="#">โปรไฟล์</a>
+            </nav>
+
+            <div class="search">
+                <input id="searchInput" type="search" placeholder="ค้นหาชื่อเรื่องหรือผู้แต่ง...">
+                <button id="searchBtn">Search</button>
+            </div>
+        </header>
+
+        <div id="lockSection" style="margin-bottom:20px;">
+            <div id="lockMessage" style="margin-bottom:10px;color:#f0f0f0;">This novel is locked. Enter the access code to unlock:</div>
+            <div style="display:flex;gap:10px;align-items:center;">
+                <input id="codeInput" type="password" placeholder="Enter code" style="flex:1;padding:8px;border-radius:4px;border:1px solid #444;background:#111;color:#fff;">
+                <button id="unlockBtn">Unlock</button>
+                <button id="lockBtn" style="background:#b30000;display:none;">Lock</button>
+            </div>
+            <div id="lockError" style="color:#ff6b6b;margin-top:8px;display:none;"></div>
+        </div>
+
+        <div id="reader" style="display:none;">
+            <div class="content" id="content">
+                <p>Chapter content will appear here...</p>
+            </div>
+            <div class="controls">
+                <button id="prevBtn" onclick="previousChapter()">← Previous</button>
+                <button id="nextBtn" onclick="nextChapter()">Next →</button>
+            </div>
+        </div>
+
+        <div class="sections">
+            <section class="section" id="recommendedSection">
+                <h2>นิยายแนะนำ <span class="badge">Recommended</span></h2>
+                <div class="cards" id="recommendedCards"></div>
+            </section>
+
+            <section class="section" id="newSection">
+                <h2>นิยายมาใหม่ <span class="badge">New</span></h2>
+                <div class="cards" id="newCards"></div>
+            </section>
+
+            <section class="section" id="trendingSection">
+                <h2>นิยายติดเทรนด์ <span class="badge">Trending</span></h2>
+                <div class="cards" id="trendingCards"></div>
+            </section>
+        </div>
+
+    </div>
+
+    <script>
+        // ----- Configuration -----
+        // Change this value to set the access code for unlocking the novel.
+        const ACCESS_CODE = 'OPEN123';
+
+        // ----- Chapters -----
+        const chapters = [
+            { title: "The Beginning", text: "This is the first chapter of our web novel..." },
+            { title: "Rising Action", text: "The story continues with new developments..." },
+            { title: "The Climax", text: "Everything comes together in this final chapter..." }
+        ];
+        
+        let currentChapter = 0;
+        
+        function loadChapter(index) {
+            currentChapter = index;
+            document.getElementById('title').textContent = chapters[index].title;
+            document.getElementById('chapter').textContent = index + 1;
+            document.getElementById('totalChapters').textContent = chapters.length;
+            document.getElementById('content').textContent = chapters[index].text;
+            
+            document.getElementById('prevBtn').disabled = index === 0;
+            document.getElementById('nextBtn').disabled = index === chapters.length - 1;
+        }
+
+        function nextChapter() {
+            if (currentChapter < chapters.length - 1) {
+                loadChapter(currentChapter + 1);
+            }
+        }
+        
+        function previousChapter() {
+            if (currentChapter > 0) {
+                loadChapter(currentChapter - 1);
+            }
+        }
+
+        // ----- Lock / Unlock Logic -----
+        function isUnlocked() {
+            return localStorage.getItem('novelUnlocked') === 'true';
+        }
+
+        function setUnlocked(val) {
+            localStorage.setItem('novelUnlocked', val ? 'true' : 'false');
+        }
+
+        function showReader() {
+            document.getElementById('reader').style.display = 'block';
+            document.getElementById('lockSection').style.display = 'none';
+            document.getElementById('lockBtn').style.display = 'inline-block';
+            loadChapter(0);
+        }
+
+        function showLock() {
+            document.getElementById('reader').style.display = 'none';
+            document.getElementById('lockSection').style.display = 'block';
+            document.getElementById('lockBtn').style.display = 'none';
+        }
+
+        function attemptUnlock() {
+            const code = document.getElementById('codeInput').value;
+            const err = document.getElementById('lockError');
+            if (!code) {
+                err.textContent = 'Please enter a code.';
+                err.style.display = 'block';
+                return;
+            }
+            if (code === ACCESS_CODE) {
+                setUnlocked(true);
+                err.style.display = 'none';
+                showReader();
+            } else {
+                err.textContent = 'Incorrect code. Please try again.';
+                err.style.display = 'block';
+            }
+        }
+
+        document.addEventListener('DOMContentLoaded', function() {
+            // Wire up buttons and inputs
+            document.getElementById('unlockBtn').addEventListener('click', attemptUnlock);
+            document.getElementById('codeInput').addEventListener('keyup', function(e) { if (e.key === 'Enter') attemptUnlock(); });
+            document.getElementById('lockBtn').addEventListener('click', function() { setUnlocked(false); showLock(); document.getElementById('codeInput').value = ''; });
+
+            // Initialize view based on stored state
+            if (isUnlocked()) {
+                showReader();
+            } else {
+                showLock();
+            }
+        });
+
+        // ---- Sample novel data and rendering logic ----
+        const novels = [
+            { id: 1, title: "ตำนานหมาป่า", author: "ผู้แต่ง A", recommended: true, isNew: false, trending: true, cover: "https://via.placeholder.com/300x400?text=Cover+1", chapters: [ { title: "บทนำ", text: "บทนำของนิยายตำนานหมาป่า..." }, { title: "บทต่อมา", text: "การผจญภัยเริ่มต้น..." } ] },
+            { id: 2, title: "รักในเมืองนิทาน", author: "ผู้แต่ง B", recommended: false, isNew: true, trending: false, cover: "https://via.placeholder.com/300x400?text=Cover+2", chapters: [ { title: "เริ่มต้น", text: "เรื่องราวความรักในเมืองนิทาน..." } ] },
+            { id: 3, title: "นักเรียนปีศาจ", author: "ผู้แต่ง C", recommended: true, isNew: true, trending: true, cover: "https://via.placeholder.com/300x400?text=Cover+3", chapters: [ { title: "บทที่ 1", text: "นักเรียนปีศาจตื่นขึ้นในโลกใหม่..." } ] },
+            { id: 4, title: "ตำนานนักเดินทาง", author: "ผู้แต่ง D", recommended: false, isNew: false, trending: true, cover: "https://via.placeholder.com/300x400?text=Cover+4", chapters: [ { title: "บทที่ 1", text: "การเดินทางเริ่มต้นที่หมู่บ้านเล็กๆ..." } ] }
+        ];
+
+        function renderCards(list, containerId) {
+            const container = document.getElementById(containerId);
+            container.innerHTML = '';
+            if (!list.length) {
+                container.innerHTML = '<p style="color:#ccc;">ไม่มีผลลัพธ์</p>';
+                return;
+            }
+            list.forEach(n => {
+                const card = document.createElement('div');
+                card.className = 'card';
+                card.innerHTML = `
+                    <img src="${n.cover}" alt="${n.title}">
+                    <h3>${n.title}</h3>
+                    <p>${n.author}</p>
+                `;
+                card.addEventListener('click', () => openNovel(n));
+                container.appendChild(card);
+            });
+        }
+
+        function renderSections(filter = '') {
+            const q = (filter || '').trim().toLowerCase();
+            const matches = (n) => !q || n.title.toLowerCase().includes(q) || n.author.toLowerCase().includes(q);
+
+            renderCards(novels.filter(n => n.recommended && matches(n)), 'recommendedCards');
+            renderCards(novels.filter(n => n.isNew && matches(n)), 'newCards');
+            renderCards(novels.filter(n => n.trending && matches(n)), 'trendingCards');
+        }
+
+        function openNovel(n) {
+            // Replace chapters' content with the selected novel's chapters
+            chapters.splice(0, chapters.length, ...n.chapters);
+            document.getElementById('title').textContent = n.title;
+            setUnlocked(true); // open directly for now
+            showReader();
+            loadChapter(0);
+            // Scroll to top of container for better view
+            document.querySelector('.container').scrollIntoView({ behavior: 'smooth' });
+        }
+
+        // Wire up search input and button
+        document.getElementById('searchBtn').addEventListener('click', () => renderSections(document.getElementById('searchInput').value));
+        document.getElementById('searchInput').addEventListener('keyup', (e) => {
+            renderSections(e.target.value);
+            if (e.key === 'Enter') {
+                // optional: focus first result or open it
+            }
+        });
+
+        // Initial render
+        renderSections();
+
+    </script>
+</body>
+</html>
