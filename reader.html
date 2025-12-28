@@ -1,0 +1,121 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Reader - Web Novel</title>
+    <style>
+        * { margin:0; padding:0; box-sizing:border-box; }
+        body { font-family: 'Georgia', serif; background:#111; color:#eaeaea; padding:20px; display:flex; justify-content:center; }
+        .container { max-width:800px; width:100%; background:#222; padding:28px; border-radius:8px; }
+        .header { display:flex; justify-content:space-between; gap:12px; align-items:center; margin-bottom:12px; }
+        a.back { color:#ffd166; text-decoration:none; font-size:14px; }
+        h1 { color:#ffd166; font-size:20px; }
+        .meta { color:#aaa; font-size:13px; margin-bottom:8px; }
+        .content { background:#1a1a1a; padding:18px; border-radius:6px; line-height:1.8; min-height:160px; }
+        .controls { display:flex; gap:10px; justify-content:space-between; margin-top:12px; }
+        button { padding:8px 14px; border-radius:6px; border:none; background:#0066cc; color:#fff; cursor:pointer; }
+        button:disabled { opacity:.5; cursor:not-allowed; }
+        .lock { margin:10px 0; }
+        input[type=password] { padding:8px; border-radius:6px; border:1px solid #444; background:#111; color:#fff; }
+        .error { color:#ff6b6b; margin-top:8px; display:none; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <div>
+                <a class="back" href="index.html">← กลับหน้าหลัก</a>
+                <h1 id="title">-</h1>
+                <div class="meta">Chapter <span id="chapter">0</span> of <span id="totalChapters">0</span></div>
+            </div>
+            <div>
+                <span id="author" style="color:#ccc;font-size:13px"></span>
+            </div>
+        </div>
+
+        <div id="noSelection" style="display:none;color:#ccc;margin-bottom:12px;">ไม่มีนิยายที่เลือกไว้ — <a href="index.html" style="color:#ffd166;">กลับไปหน้าแรก</a></div>
+
+        <div id="lockSection" class="lock">
+            <div id="lockMessage">นิยายนี้ล็อคอยู่ — ใส่รหัสเพื่อปลดล็อค:</div>
+            <div style="display:flex;gap:8px;align-items:center;margin-top:8px;">
+                <input id="codeInput" type="password" placeholder="Enter code">
+                <button id="unlockBtn">Unlock</button>
+                <button id="lockBtn" style="background:#b30000;display:none;">Lock</button>
+            </div>
+            <div id="lockError" class="error"></div>
+        </div>
+
+        <div id="reader" style="display:none;margin-top:10px;">
+            <div class="content" id="content">Chapter content will appear here...</div>
+            <div class="controls">
+                <button id="prevBtn" onclick="previousChapter()">← Previous</button>
+                <button id="nextBtn" onclick="nextChapter()">Next →</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const ACCESS_CODE = 'OPEN123';
+        let novel = null;
+        let chapters = [];
+        let currentChapter = 0;
+
+        function loadChapter(index) {
+            currentChapter = index;
+            document.getElementById('chapter').textContent = index + 1;
+            document.getElementById('totalChapters').textContent = chapters.length;
+            document.getElementById('content').textContent = chapters[index].text;
+            document.getElementById('prevBtn').disabled = index === 0;
+            document.getElementById('nextBtn').disabled = index === chapters.length - 1;
+        }
+        function nextChapter() { if (currentChapter < chapters.length - 1) loadChapter(currentChapter + 1); }
+        function previousChapter() { if (currentChapter > 0) loadChapter(currentChapter - 1); }
+
+        function unlockKey() { return 'novelUnlocked_' + (novel ? novel.id : 'none'); }
+        function isUnlocked() { return localStorage.getItem(unlockKey()) === 'true'; }
+        function setUnlocked(val) { localStorage.setItem(unlockKey(), val ? 'true' : 'false'); }
+
+        function showReader() {
+            document.getElementById('reader').style.display = 'block';
+            document.getElementById('lockSection').style.display = 'none';
+            document.getElementById('lockBtn').style.display = 'inline-block';
+            if (chapters.length) loadChapter(0);
+        }
+        function showLock() {
+            document.getElementById('reader').style.display = 'none';
+            document.getElementById('lockSection').style.display = 'block';
+            document.getElementById('lockBtn').style.display = 'none';
+        }
+
+        function attemptUnlock() {
+            const code = document.getElementById('codeInput').value;
+            const err = document.getElementById('lockError');
+            if (!code) { err.textContent = 'Please enter a code.'; err.style.display = 'block'; return; }
+            if (code === ACCESS_CODE) { setUnlocked(true); err.style.display = 'none'; showReader(); }
+            else { err.textContent = 'Incorrect code. Please try again.'; err.style.display = 'block'; }
+        }
+
+        document.addEventListener('DOMContentLoaded', function() {
+            const raw = localStorage.getItem('selectedNovel');
+            if (!raw) {
+                document.getElementById('noSelection').style.display = 'block';
+                document.getElementById('lockSection').style.display = 'none';
+                return;
+            }
+            novel = JSON.parse(raw);
+            document.getElementById('title').textContent = novel.title || '-';
+            document.getElementById('author').textContent = novel.author ? 'โดย ' + novel.author : '';
+            chapters = (novel.chapters || []).slice();
+
+            document.getElementById('unlockBtn').addEventListener('click', attemptUnlock);
+            document.getElementById('codeInput').addEventListener('keyup', function(e) { if (e.key === 'Enter') attemptUnlock(); });
+            document.getElementById('lockBtn').addEventListener('click', function() { setUnlocked(false); showLock(); document.getElementById('codeInput').value = ''; });
+
+            if (isUnlocked()) showReader(); else showLock();
+            // Scroll to top for better view
+            document.querySelector('.container').scrollIntoView({ behavior: 'smooth' });
+        });
+    </script>
+</body>
+</html>
