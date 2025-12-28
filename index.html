@@ -169,6 +169,7 @@
         .card p { font-size: 13px; color: #ccc; margin-bottom: 6px; }
 
         .badge { display:inline-block; background:#ff6b6b; color:#fff; padding:3px 8px; border-radius:6px; font-size:12px; }
+        .badge.locked { background:#b30000; }
 
         /* Follow button on cards */
         .follow-btn { display:inline-block; background:#ffd166; color:#111; padding:6px 8px; border-radius:6px; font-size:12px; border:none; cursor:pointer; }
@@ -233,7 +234,8 @@
             { id: 1, title: "ตำนานหมาป่า", author: "ผู้แต่ง A", recommended: true, isNew: false, trending: true, cover: "https://via.placeholder.com/300x400?text=Cover+1", chapters: [ { title: "บทนำ", text: "บทนำของนิยายตำนานหมาป่า..." }, { title: "บทต่อมา", text: "การผจญภัยเริ่มต้น..." } ] },
             { id: 2, title: "รักในเมืองนิทาน", author: "ผู้แต่ง B", recommended: false, isNew: true, trending: false, cover: "https://via.placeholder.com/300x400?text=Cover+2", chapters: [ { title: "เริ่มต้น", text: "เรื่องราวความรักในเมืองนิทาน..." } ] },
             { id: 3, title: "นักเรียนปีศาจ", author: "ผู้แต่ง C", recommended: true, isNew: true, trending: true, cover: "https://via.placeholder.com/300x400?text=Cover+3", chapters: [ { title: "บทที่ 1", text: "นักเรียนปีศาจตื่นขึ้นในโลกใหม่..." } ] },
-            { id: 4, title: "ตำนานนักเดินทาง", author: "ผู้แต่ง D", recommended: false, isNew: false, trending: true, cover: "https://via.placeholder.com/300x400?text=Cover+4", chapters: [ { title: "บทที่ 1", text: "การเดินทางเริ่มต้นที่หมู่บ้านเล็กๆ..." } ] }
+            { id: 4, title: "ตำนานนักเดินทาง", author: "ผู้แต่ง D", recommended: false, isNew: false, trending: true, cover: "https://via.placeholder.com/300x400?text=Cover+4", chapters: [ { title: "บทที่ 1", text: "การเดินทางเริ่มต้นที่หมู่บ้านเล็กๆ..." } ] },
+            { id: 5, title: "Warboss", author: "Mike Brooks", recommended: false, isNew: true, trending: false, accessCode: "9781804073452", cover: "https://m.media-amazon.com/images/S/compressed.photo.goodreads.com/books/1679561820i/68006143.jpg", chapters: [ { title: "Prologue", text: "Warboss - prologue..." }, { title: "Chapter 1", text: "Warboss chapter 1..." } ] }
         ];
 
         function renderCards(list, containerId) {
@@ -252,6 +254,12 @@
                     <h3>${n.title}</h3>
                     <p>${n.author}</p>
                 `;
+                if (n.accessCode) {
+                    const lockBadge = document.createElement('span');
+                    lockBadge.className = 'badge locked';
+                    lockBadge.textContent = 'ล็อค';
+                    card.querySelector('h3').insertAdjacentElement('afterend', lockBadge);
+                }
                 // follow button
                 const followBtn = document.createElement('button');
                 followBtn.className = 'follow-btn';
@@ -317,8 +325,6 @@
             localStorage.setItem('selectedNovel', JSON.stringify(n));
             // Save recent
             addToRecentlyRead(n);
-            // Remove any previous unlock flag for this novel to require unlocking when opening (optional)
-            try { localStorage.removeItem('novelUnlocked_' + n.id); } catch(e){}
             window.location.href = 'reader.html';
         }
 
