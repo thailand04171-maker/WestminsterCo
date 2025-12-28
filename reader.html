@@ -45,17 +45,18 @@
 
         <div id="noSelection" style="display:none;color:#ccc;margin-bottom:12px;">ไม่มีนิยายที่เลือกไว้ — <a href="index.html" style="color:#ffd166;">กลับไปหน้าแรก</a></div>
 
-        <div id="lockSection" class="lock">
+        <!-- Per-novel lock section (shown only if novel.accessCode exists and is not unlocked) -->
+        <div id="lockSection" style="margin-bottom:12px;display:none;color:#f0f0f0;">
             <div id="lockMessage">นิยายนี้ล็อคอยู่ — ใส่รหัสเพื่อปลดล็อค:</div>
             <div style="display:flex;gap:8px;align-items:center;margin-top:8px;">
-                <input id="codeInput" type="password" placeholder="Enter code">
+                <input id="codeInput" type="password" placeholder="Enter code" style="padding:8px;border-radius:6px;border:1px solid #444;background:#111;color:#fff;">
                 <button id="unlockBtn">Unlock</button>
                 <button id="lockBtn" style="background:#b30000;display:none;">Lock</button>
             </div>
             <div id="lockError" class="error"></div>
         </div>
 
-        <div id="reader" style="display:none;margin-top:10px;">
+        <div id="reader" style="margin-top:10px;">
             <div class="content" id="content">Chapter content will appear here...</div>
             <div class="controls">
                 <button id="prevBtn" onclick="previousChapter()">← Previous</button>
@@ -65,7 +66,7 @@
     </div>
 
     <script>
-        const ACCESS_CODE = 'OPEN123';
+        // Unlock-by-code removed: reader opens directly
         let novel = null;
         let chapters = [];
         let currentChapter = 0;
@@ -81,20 +82,9 @@
         function nextChapter() { if (currentChapter < chapters.length - 1) loadChapter(currentChapter + 1); }
         function previousChapter() { if (currentChapter > 0) loadChapter(currentChapter - 1); }
 
-        function unlockKey() { return 'novelUnlocked_' + (novel ? novel.id : 'none'); }
-        function isUnlocked() { return localStorage.getItem(unlockKey()) === 'true'; }
-        function setUnlocked(val) { localStorage.setItem(unlockKey(), val ? 'true' : 'false'); }
-
         function showReader() {
             document.getElementById('reader').style.display = 'block';
-            document.getElementById('lockSection').style.display = 'none';
-            document.getElementById('lockBtn').style.display = 'inline-block';
             if (chapters.length) loadChapter(0);
-        }
-        function showLock() {
-            document.getElementById('reader').style.display = 'none';
-            document.getElementById('lockSection').style.display = 'block';
-            document.getElementById('lockBtn').style.display = 'none';
         }
 
         // follow utilities
@@ -108,6 +98,37 @@
             else { setFollow(novel); btn.classList.add('following'); btn.textContent='ติดตามแล้ว'; }
         }
 
+        // lock helpers (per-novel)
+        function unlockKey() { return 'novelUnlocked_' + (novel ? novel.id : 'none'); }
+        function isUnlocked() { return !!(novel && localStorage.getItem(unlockKey()) === 'true'); }
+        function setUnlocked(val) { if (!novel) return; localStorage.setItem(unlockKey(), val ? 'true' : 'false'); }
+
+        function attemptUnlock() {
+            if (!novel || !novel.accessCode) return showReader();
+            const code = document.getElementById('codeInput').value;
+            const err = document.getElementById('lockError');
+            if (!code) { err.textContent = 'Please enter a code.'; err.style.display = 'block'; return; }
+            if (code === String(novel.accessCode)) {
+                setUnlocked(true);
+                err.style.display = 'none';
+                document.getElementById('lockSection').style.display = 'none';
+                document.getElementById('lockBtn').style.display = 'inline-block';
+                showReader();
+            } else {
+                err.textContent = 'Incorrect code. Please try again.';
+                err.style.display = 'block';
+            }
+        }
+
+        function lockNovel() {
+            if (!novel) return;
+            localStorage.removeItem(unlockKey());
+            document.getElementById('lockSection').style.display = 'block';
+            document.getElementById('lockBtn').style.display = 'none';
+            document.getElementById('codeInput').value = '';
+            showReader();
+        }
+
         function addToRecentlyRead(n) {
             try {
                 let arr = JSON.parse(localStorage.getItem('recentlyRead') || '[]');
@@ -118,19 +139,11 @@
             } catch(e) { console.error(e); }
         }
 
-        function attemptUnlock() {
-            const code = document.getElementById('codeInput').value;
-            const err = document.getElementById('lockError');
-            if (!code) { err.textContent = 'Please enter a code.'; err.style.display = 'block'; return; }
-            if (code === ACCESS_CODE) { setUnlocked(true); err.style.display = 'none'; showReader(); }
-            else { err.textContent = 'Incorrect code. Please try again.'; err.style.display = 'block'; }
-        }
 
         document.addEventListener('DOMContentLoaded', function() {
             const raw = localStorage.getItem('selectedNovel');
             if (!raw) {
                 document.getElementById('noSelection').style.display = 'block';
-                document.getElementById('lockSection').style.display = 'none';
                 return;
             }
             novel = JSON.parse(raw);

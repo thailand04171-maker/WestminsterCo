@@ -170,6 +170,7 @@
         .card p { font-size: 13px; color: #ccc; margin-bottom: 6px; }
 
         .badge { display:inline-block; background:#ff6b6b; color:#fff; padding:3px 8px; border-radius:6px; font-size:12px; }
+        .badge.locked { background:#b30000; }
 
         /* Follow button on cards */
         .follow-btn { display:inline-block; background:#ffd166; color:#111; padding:6px 8px; border-radius:6px; font-size:12px; border:none; cursor:pointer; }
@@ -268,6 +269,12 @@
                     <h3>${n.title}</h3>
                     <p>${n.author}</p>
                 `;
+                if (n.accessCode) {
+                    const lockBadge = document.createElement('span');
+                    lockBadge.className = 'badge locked';
+                    lockBadge.textContent = 'ล็อค';
+                    card.querySelector('h3').insertAdjacentElement('afterend', lockBadge);
+                }
                 // follow button
                 const followBtn = document.createElement('button');
                 followBtn.className = 'follow-btn';
@@ -419,8 +426,6 @@ function fetchBookData(isbn) {
             localStorage.setItem('selectedNovel', JSON.stringify(n));
             // Save recent
             addToRecentlyRead(n);
-            // Remove any previous unlock flag for this novel to require unlocking when opening (optional)
-            try { localStorage.removeItem('novelUnlocked_' + n.id); } catch(e){}
             window.location.href = 'reader.html';
         }
 
