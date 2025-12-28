@@ -4,6 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Web Novel Reader</title>
+    <script src="https://cdn.jsdelivr.net/npm/quagga@0.12.1/dist/quagga.min.js"></script>
     <style>
         * {
             margin: 0;
@@ -199,6 +200,7 @@
             <div class="search">
                 <input id="searchInput" type="search" placeholder="ค้นหาชื่อเรื่องหรือผู้แต่ง...">
                 <button id="searchBtn">Search</button>
+                <button id="addBookBtn">เพิ่มหนังสือใหม่</button>
             </div>
         </header>
 
@@ -225,16 +227,30 @@
 
     </div>
 
+    <div id="addBookModal" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.8); z-index:1000;">
+        <div style="position:absolute; top:50%; left:50%; transform:translate(-50%,-50%); background:#222; padding:20px; border-radius:8px; width:400px;">
+            <h3 style="color:#ffd166;">สแกนบาร์โค้ด ISBN หรือกรอก ISBN</h3>
+            <div id="scanner-container" style="width:100%; height:300px; background:#000;"></div>
+            <input id="isbnInput" type="text" placeholder="กรอก ISBN" style="width:100%; margin-top:10px; padding:8px; border-radius:6px; border:1px solid #444; background:#111; color:#fff; position:relative; z-index:10;">
+            <button id="searchIsbnBtn" style="margin-top:10px; position:relative; z-index:10;">ค้นหาจาก ISBN</button>
+            <button id="closeModalBtn" style="margin-top:10px; position:relative; z-index:10;">ปิด</button>
+        </div>
+    </div>
+
     <script>
         // Index page: reader logic is handled in `reader.html`. Clicking a card saves the selected novel to localStorage and navigates there.
 
         // ---- Sample novel data and rendering logic ----
-        const novels = [
-            { id: 1, title: "ตำนานหมาป่า", author: "ผู้แต่ง A", recommended: true, isNew: false, trending: true, cover: "https://via.placeholder.com/300x400?text=Cover+1", chapters: [ { title: "บทนำ", text: "บทนำของนิยายตำนานหมาป่า..." }, { title: "บทต่อมา", text: "การผจญภัยเริ่มต้น..." } ] },
-            { id: 2, title: "รักในเมืองนิทาน", author: "ผู้แต่ง B", recommended: false, isNew: true, trending: false, cover: "https://via.placeholder.com/300x400?text=Cover+2", chapters: [ { title: "เริ่มต้น", text: "เรื่องราวความรักในเมืองนิทาน..." } ] },
-            { id: 3, title: "นักเรียนปีศาจ", author: "ผู้แต่ง C", recommended: true, isNew: true, trending: true, cover: "https://via.placeholder.com/300x400?text=Cover+3", chapters: [ { title: "บทที่ 1", text: "นักเรียนปีศาจตื่นขึ้นในโลกใหม่..." } ] },
-            { id: 4, title: "ตำนานนักเดินทาง", author: "ผู้แต่ง D", recommended: false, isNew: false, trending: true, cover: "https://via.placeholder.com/300x400?text=Cover+4", chapters: [ { title: "บทที่ 1", text: "การเดินทางเริ่มต้นที่หมู่บ้านเล็กๆ..." } ] }
-        ];
+        let novels = JSON.parse(localStorage.getItem('novels') || '[]');
+        if (!novels.length) {
+            novels = [
+                { id: 1, title: "ตำนานหมาป่า", author: "ผู้แต่ง A", recommended: true, isNew: false, trending: true, cover: "https://img.lovepik.com/free-template/20231118/lovepik-workbook-study-book-cartoon-green-cover-image_6810481_detail.jpg", chapters: [ { title: "บทนำ", text: "บทนำของนิยายตำนานหมาป่า..." }, { title: "บทต่อมา", text: "การผจญภัยเริ่มต้น..." } ] },
+                { id: 2, title: "รักในเมืองนิทาน", author: "ผู้แต่ง B", recommended: false, isNew: true, trending: false, cover: "https://tse2.mm.bing.net/th/id/OIP.hUfX5jX8ORvezCnBkZEMeQHaKe?pid=ImgDet&w=184&h=260&c=7&dpr=1.3&o=7&rm=3", chapters: [ { title: "เริ่มต้น", text: "เรื่องราวความรักในเมืองนิทาน..." } ] },
+                { id: 3, title: "นักเรียนปีศาจ", author: "ผู้แต่ง C", recommended: true, isNew: true, trending: true, cover: "https://tse2.mm.bing.net/th/id/OIP.RBjLG2LsnPbLl2ZugQ1OyAHaKl?w=560&h=800&rs=1&pid=ImgDetMain&o=7&rm=3", chapters: [ { title: "บทที่ 1", text: "นักเรียนปีศาจตื่นขึ้นในโลกใหม่..." } ] },
+                { id: 4, title: "ตำนานนักเดินทาง", author: "ผู้แต่ง D", recommended: false, isNew: false, trending: true, cover: "https://tse3.mm.bing.net/th/id/OIP.RUzye9UdLNkEpZPN5fQpdwHaK4?pid=ImgDet&w=184&h=270&c=7&dpr=1.3&o=7&rm=3", chapters: [ { title: "บทที่ 1", text: "การเดินทางเริ่มต้นที่หมู่บ้านเล็กๆ..." } ] }
+            ];
+            localStorage.setItem('novels', JSON.stringify(novels));
+        }
 
         function renderCards(list, containerId) {
             const container = document.getElementById(containerId);
@@ -246,7 +262,7 @@
             list.forEach(n => {
                 const card = document.createElement('div');
                 card.className = 'card';
-                const coverSrc = localStorage.getItem('customCover_' + n.id) || n.cover;
+                const coverSrc = n.cover;
                 card.innerHTML = `
                     <img src="${coverSrc}" alt="${n.title}">
                     <h3>${n.title}</h3>
@@ -282,6 +298,92 @@
             renderCards(novels.filter(n => n.isNew && matches(n)), 'newCards');
             renderCards(novels.filter(n => n.trending && matches(n)), 'trendingCards');
         }
+        document.getElementById('addBookBtn').addEventListener('click', () => {
+    document.getElementById('addBookModal').style.display = 'block';
+    startScanner();
+});
+document.getElementById('closeModalBtn').addEventListener('click', () => {
+    document.getElementById('addBookModal').style.display = 'none';
+    Quagga.stop();
+});
+
+document.getElementById('searchIsbnBtn').addEventListener('click', () => {
+    const isbn = document.getElementById('isbnInput').value.trim();
+    if (isbn) {
+        fetchBookData(isbn);
+        document.getElementById('addBookModal').style.display = 'none';
+        Quagga.stop();
+    } else {
+        alert('กรุณากรอก ISBN');
+    }
+});
+
+function startScanner() {
+    Quagga.init({
+        inputStream: {
+            name: "Live",
+            type: "LiveStream",
+            target: document.querySelector('#scanner-container'),
+            constraints: {
+                width: 640,
+                height: 480,
+                facingMode: "environment"
+            }
+        },
+        locator: {
+            patchSize: "medium",
+            halfSample: true
+        },
+        numOfWorkers: 2,
+        decoder: {
+            readers: ["ean_reader"]
+        },
+        locate: true
+    }, function(err) {
+        if (err) {
+            console.log(err);
+            return;
+        }
+        Quagga.start();
+    });
+    Quagga.onDetected(function(result) {
+        const code = result.codeResult.code;
+        console.log("Detected ISBN: " + code);
+        fetchBookData(code);
+        Quagga.stop();
+        document.getElementById('addBookModal').style.display = 'none';
+    });
+}
+
+function fetchBookData(isbn) {
+    fetch(`https://www.googleapis.com/books/v1/volumes?q=isbn:${isbn}`)
+    .then(response => response.json())
+    .then(data => {
+        if (data.items && data.items.length > 0) {
+            const book = data.items[0].volumeInfo;
+            const newNovel = {
+                id: Date.now(),
+                title: book.title || 'Unknown',
+                author: book.authors ? book.authors.join(', ') : 'Unknown',
+                recommended: false,
+                isNew: true,
+                trending: false,
+                cover: book.imageLinks ? book.imageLinks.thumbnail : 'https://via.placeholder.com/300x400?text=No+Cover',
+                chapters: [{ title: "บทที่ 1", text: "เนื้อหาเริ่มต้น..." }]
+            };
+            novels.push(newNovel);
+            localStorage.setItem('novels', JSON.stringify(novels));
+            renderSections();
+            alert('เพิ่มหนังสือสำเร็จ: ' + newNovel.title);
+        } else {
+            alert('ไม่พบข้อมูลหนังสือสำหรับ ISBN นี้');
+        }
+    })
+    .catch(err => {
+        console.error(err);
+        alert('เกิดข้อผิดพลาดในการดึงข้อมูล');
+    });
+}
 
         function getFollowedIds() { return JSON.parse(localStorage.getItem('followedNovels') || '[]'); }
         function isFollowedId(id) { return getFollowedIds().includes(id); }

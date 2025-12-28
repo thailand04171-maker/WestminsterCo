@@ -22,8 +22,7 @@
         /* follow button */
         .follow-btn { display:inline-block; background:#ffd166; color:#111; padding:6px 8px; border-radius:6px; font-size:12px; border:none; cursor:pointer; }
         .follow-btn.following { background:#66bb6a; color:#fff; }
-        /* cover preview */
-        .cover-preview img { width:120px; border-radius:6px; display:block; margin-top:6px; }
+
     </style>
 </head>
 <body>
@@ -39,11 +38,8 @@
                 <button id="followBtn" class="follow-btn" style="margin-left:6px;">ติดตาม</button>
             </div>
 
-            <div style="margin-top:8px;display:flex;gap:12px;align-items:center;">
-                <label for="coverInput" style="color:#ccc;font-size:13px;">อัปโหลดหน้าปก:</label>
-                <input id="coverInput" type="file" accept="image/*">
-                <button id="applyCoverBtn" class="follow-btn" style="margin-left:6px;">ตั้งเป็นหน้าปก</button>
-                <div id="coverPreview" class="cover-preview" aria-hidden="true"></div>
+            <div style="margin-top:8px;">
+                <img id="coverImg" src="" alt="Cover" style="width:120px; border-radius:6px;">
             </div>
         </div>
 
@@ -130,14 +126,6 @@
             else { err.textContent = 'Incorrect code. Please try again.'; err.style.display = 'block'; }
         }
 
-        function attemptUnlock() {
-            const code = document.getElementById('codeInput').value;
-            const err = document.getElementById('lockError');
-            if (!code) { err.textContent = 'Please enter a code.'; err.style.display = 'block'; return; }
-            if (code === ACCESS_CODE) { setUnlocked(true); err.style.display = 'none'; showReader(); }
-            else { err.textContent = 'Incorrect code. Please try again.'; err.style.display = 'block'; }
-        }
-
         document.addEventListener('DOMContentLoaded', function() {
             const raw = localStorage.getItem('selectedNovel');
             if (!raw) {
@@ -149,6 +137,8 @@
             document.getElementById('title').textContent = novel.title || '-';
             document.getElementById('author').textContent = novel.author ? 'โดย ' + novel.author : '';
             chapters = (novel.chapters || []).slice();
+
+            document.getElementById('coverImg').src = novel.cover || '';
 
             document.getElementById('unlockBtn').addEventListener('click', attemptUnlock);
             document.getElementById('codeInput').addEventListener('keyup', function(e) { if (e.key === 'Enter') attemptUnlock(); });
@@ -162,52 +152,12 @@
             // record recent read
             addToRecentlyRead(novel);
 
-            // cover upload UI
-            const coverInput = document.getElementById('coverInput');
-            const applyCoverBtn = document.getElementById('applyCoverBtn');
-            const coverPreview = document.getElementById('coverPreview');
-            let pendingCoverData = null;
-
-            coverInput.addEventListener('change', function(e) {
-                const file = e.target.files && e.target.files[0];
-                if (!file) { coverPreview.innerHTML = ''; pendingCoverData = null; return; }
-                const reader = new FileReader();
-                reader.onload = function(ev) {
-                    pendingCoverData = ev.target.result;
-                    coverPreview.innerHTML = `<img src="${pendingCoverData}" alt="preview">`;
-                };
-                reader.readAsDataURL(file);
-            });
-
-            applyCoverBtn.addEventListener('click', function() {
-                if (!pendingCoverData) return alert('โปรดเลือกไฟล์รูปภาพก่อน');
-                // save custom cover
-                try {
-                    localStorage.setItem('customCover_' + novel.id, pendingCoverData);
-                    // update selectedNovel
-                    novel.cover = pendingCoverData;
-                    localStorage.setItem('selectedNovel', JSON.stringify(novel));
-                    // update followed copy if exists
-                    if (isFollowedId(novel.id)) {
-                        localStorage.setItem('followedNovel_' + novel.id, JSON.stringify(novel));
-                    }
-                    // update recentlyRead if present
-                    try {
-                        let arr = JSON.parse(localStorage.getItem('recentlyRead') || '[]');
-                        arr = arr.map(item => item.id === novel.id ? Object.assign({}, item, { cover: pendingCoverData }) : item);
-                        localStorage.setItem('recentlyRead', JSON.stringify(arr));
-                    } catch(e) { /* ignore */ }
-
-                    alert('บันทึกหน้าปกเรียบร้อย');
-                } catch(err) {
-                    console.error(err); alert('ไม่สามารถบันทึกรูปได้ — หน่วยความจำเต็มหรือเบราว์เซอร์ไม่รองรับ');
-                }
-            });
-
             if (isUnlocked()) showReader(); else showLock();
+
             // Scroll to top for better view
             document.querySelector('.container').scrollIntoView({ behavior: 'smooth' });
         });
     </script>
 </body>
 </html>
+            
