@@ -170,6 +170,10 @@
 
         .badge { display:inline-block; background:#ff6b6b; color:#fff; padding:3px 8px; border-radius:6px; font-size:12px; }
 
+        /* Follow button on cards */
+        .follow-btn { display:inline-block; background:#ffd166; color:#111; padding:6px 8px; border-radius:6px; font-size:12px; border:none; cursor:pointer; }
+        .follow-btn.following { background:#66bb6a; color:#fff; }
+
         @media (max-width: 600px) {
             .header { flex-direction: column; align-items: stretch; gap: 12px; }
             .search input[type="search"] { width:100%; }
@@ -188,7 +192,7 @@
             <nav class="nav" aria-label="Main navigation">
                 <a href="#" class="active">หน้าแรก</a>
                 <a href="#">หมวดหมู่</a>
-                <a href="#">ชั้นหนังสือ</a>
+                <a href="Libary.html">ชั้นหนังสือ</a>
                 <a href="#">โปรไฟล์</a>
             </nav>
 
@@ -242,11 +246,29 @@
             list.forEach(n => {
                 const card = document.createElement('div');
                 card.className = 'card';
+                const coverSrc = localStorage.getItem('customCover_' + n.id) || n.cover;
                 card.innerHTML = `
-                    <img src="${n.cover}" alt="${n.title}">
+                    <img src="${coverSrc}" alt="${n.title}">
                     <h3>${n.title}</h3>
                     <p>${n.author}</p>
                 `;
+                // follow button
+                const followBtn = document.createElement('button');
+                followBtn.className = 'follow-btn';
+                followBtn.textContent = isFollowedId(n.id) ? 'ติดตามแล้ว' : 'ติดตาม';
+                if (isFollowedId(n.id)) followBtn.classList.add('following');
+                followBtn.addEventListener('click', (e) => {
+                    e.stopPropagation();
+                    toggleFollow(n, followBtn);
+                });
+                // append follow btn to card
+                const footer = document.createElement('div');
+                footer.style.display = 'flex';
+                footer.style.justifyContent = 'space-between';
+                footer.style.alignItems = 'center';
+                footer.appendChild(followBtn);
+
+                card.appendChild(footer);
                 card.addEventListener('click', () => openNovel(n));
                 container.appendChild(card);
             });
@@ -261,9 +283,40 @@
             renderCards(novels.filter(n => n.trending && matches(n)), 'trendingCards');
         }
 
+        function getFollowedIds() { return JSON.parse(localStorage.getItem('followedNovels') || '[]'); }
+        function isFollowedId(id) { return getFollowedIds().includes(id); }
+        function toggleFollow(n, btn) {
+            const ids = getFollowedIds();
+            if (ids.includes(n.id)) {
+                const newIds = ids.filter(i => i !== n.id);
+                localStorage.setItem('followedNovels', JSON.stringify(newIds));
+                localStorage.removeItem('followedNovel_' + n.id);
+                btn.classList.remove('following');
+                btn.textContent = 'ติดตาม';
+            } else {
+                ids.unshift(n.id);
+                localStorage.setItem('followedNovels', JSON.stringify(ids));
+                localStorage.setItem('followedNovel_' + n.id, JSON.stringify(n));
+                btn.classList.add('following');
+                btn.textContent = 'ติดตามแล้ว';
+            }
+        }
+
+        function addToRecentlyRead(n) {
+            try {
+                let arr = JSON.parse(localStorage.getItem('recentlyRead') || '[]');
+                arr = arr.filter(item => item.id !== n.id);
+                arr.unshift({ id: n.id, title: n.title, author: n.author, cover: n.cover, lastRead: Date.now(), chapters: n.chapters });
+                if (arr.length > 20) arr = arr.slice(0, 20);
+                localStorage.setItem('recentlyRead', JSON.stringify(arr));
+            } catch(e) { console.error(e); }
+        }
+
         function openNovel(n) {
             // Save selected novel to localStorage and navigate to reader page
             localStorage.setItem('selectedNovel', JSON.stringify(n));
+            // Save recent
+            addToRecentlyRead(n);
             // Remove any previous unlock flag for this novel to require unlocking when opening (optional)
             try { localStorage.removeItem('novelUnlocked_' + n.id); } catch(e){}
             window.location.href = 'reader.html';
