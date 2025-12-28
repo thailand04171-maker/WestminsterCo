@@ -1,0 +1,197 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Web Novel Reader</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Georgia', serif;
+            background: #1a1a1a;
+            color: #e0e0e0;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            padding: 20px;
+        }
+        
+        .container {
+            max-width: 800px;
+            width: 100%;
+            background: #2a2a2a;
+            padding: 40px;
+            border-radius: 8px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.3);
+        }
+        
+        h1 {
+            margin-bottom: 10px;
+            color: #fff;
+        }
+        
+        .meta {
+            color: #999;
+            margin-bottom: 30px;
+            font-size: 14px;
+        }
+        
+        .content {
+            line-height: 1.8;
+            font-size: 16px;
+            margin-bottom: 30px;
+            text-align: justify;
+        }
+        
+        .controls {
+            display: flex;
+            gap: 10px;
+            justify-content: space-between;
+        }
+        
+        button {
+            padding: 10px 20px;
+            background: #0066cc;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 14px;
+        }
+        
+        button:hover {
+            background: #0052a3;
+        }
+        
+        button:disabled {
+            background: #666;
+            cursor: not-allowed;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1 id="title">Web Novel Reader</h1>
+        <div class="meta">
+            <span>Chapter <span id="chapter">1</span> of <span id="totalChapters">3</span></span>
+        </div>
+        <div id="lockSection" style="margin-bottom:20px;">
+            <div id="lockMessage" style="margin-bottom:10px;color:#f0f0f0;">This novel is locked. Enter the access code to unlock:</div>
+            <div style="display:flex;gap:10px;align-items:center;">
+                <input id="codeInput" type="password" placeholder="Enter code" style="flex:1;padding:8px;border-radius:4px;border:1px solid #444;background:#111;color:#fff;">
+                <button id="unlockBtn">Unlock</button>
+                <button id="lockBtn" style="background:#b30000;display:none;">Lock</button>
+            </div>
+            <div id="lockError" style="color:#ff6b6b;margin-top:8px;display:none;"></div>
+        </div>
+
+        <div id="reader" style="display:none;">
+            <div class="content" id="content">
+                <p>Chapter content will appear here...</p>
+            </div>
+            <div class="controls">
+                <button id="prevBtn" onclick="previousChapter()">← Previous</button>
+                <button id="nextBtn" onclick="nextChapter()">Next →</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // ----- Configuration -----
+        // Change this value to set the access code for unlocking the novel.
+        const ACCESS_CODE = 'OPEN123';
+
+        // ----- Chapters -----
+        const chapters = [
+            { title: "The Beginning", text: "This is the first chapter of our web novel..." },
+            { title: "Rising Action", text: "The story continues with new developments..." },
+            { title: "The Climax", text: "Everything comes together in this final chapter..." }
+        ];
+        
+        let currentChapter = 0;
+        
+        function loadChapter(index) {
+            currentChapter = index;
+            document.getElementById('title').textContent = chapters[index].title;
+            document.getElementById('chapter').textContent = index + 1;
+            document.getElementById('totalChapters').textContent = chapters.length;
+            document.getElementById('content').textContent = chapters[index].text;
+            
+            document.getElementById('prevBtn').disabled = index === 0;
+            document.getElementById('nextBtn').disabled = index === chapters.length - 1;
+        }
+
+        function nextChapter() {
+            if (currentChapter < chapters.length - 1) {
+                loadChapter(currentChapter + 1);
+            }
+        }
+        
+        function previousChapter() {
+            if (currentChapter > 0) {
+                loadChapter(currentChapter - 1);
+            }
+        }
+
+        // ----- Lock / Unlock Logic -----
+        function isUnlocked() {
+            return localStorage.getItem('novelUnlocked') === 'true';
+        }
+
+        function setUnlocked(val) {
+            localStorage.setItem('novelUnlocked', val ? 'true' : 'false');
+        }
+
+        function showReader() {
+            document.getElementById('reader').style.display = 'block';
+            document.getElementById('lockSection').style.display = 'none';
+            document.getElementById('lockBtn').style.display = 'inline-block';
+            loadChapter(0);
+        }
+
+        function showLock() {
+            document.getElementById('reader').style.display = 'none';
+            document.getElementById('lockSection').style.display = 'block';
+            document.getElementById('lockBtn').style.display = 'none';
+        }
+
+        function attemptUnlock() {
+            const code = document.getElementById('codeInput').value;
+            const err = document.getElementById('lockError');
+            if (!code) {
+                err.textContent = 'Please enter a code.';
+                err.style.display = 'block';
+                return;
+            }
+            if (code === ACCESS_CODE) {
+                setUnlocked(true);
+                err.style.display = 'none';
+                showReader();
+            } else {
+                err.textContent = 'Incorrect code. Please try again.';
+                err.style.display = 'block';
+            }
+        }
+
+        document.addEventListener('DOMContentLoaded', function() {
+            // Wire up buttons and inputs
+            document.getElementById('unlockBtn').addEventListener('click', attemptUnlock);
+            document.getElementById('codeInput').addEventListener('keyup', function(e) { if (e.key === 'Enter') attemptUnlock(); });
+            document.getElementById('lockBtn').addEventListener('click', function() { setUnlocked(false); showLock(); document.getElementById('codeInput').value = ''; });
+
+            // Initialize view based on stored state
+            if (isUnlocked()) {
+                showReader();
+            } else {
+                showLock();
+            }
+        });
+    </script>
+</body>
+</html>
